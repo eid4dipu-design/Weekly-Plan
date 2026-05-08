@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engineering Planner</title>
+
+<style>
+body { font-family: system-ui; background:#F8F4EE; margin:0; padding:20px }
+h1 { color:#C67C2E }
+
+.topbar { display:flex; gap:10px; margin-bottom:20px }
+.btn { padding:8px 12px; border:none; border-radius:6px; cursor:pointer }
+.primary { background:#C67C2E; color:#fff }
+
+.card { background:#fff; border:1px solid #ddd; border-radius:10px; padding:8px; margin:5px }
+.grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px }
+.day { background:#fff; padding:10px; border-radius:8px; min-height:120px; border:1px solid #ddd }
+
+.modal {
+ position:fixed; top:0; left:0; width:100%; height:100%;
+ background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center;
+}
+.modal-content {
+ background:#fff; padding:20px; border-radius:10px; width:300px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Engineering Planner</h1>
+
+<div class="topbar">
+<button class="btn primary" onclick="openModal()">+ Assign Task</button>
+
+<select id="filterEng">
+<option value="">All</option>
+</select>
+</div>
+
+<!-- GRID -->
+<div class="grid" id="planner"></div>
+
+<!-- DASHBOARD -->
+<h3>Engineer Load</h3>
+<div id="dashboard"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="modal-content">
+
+<h3>Assign Task</h3>
+
+<input id="taskName" placeholder="Task"><br><br>
+<input id="hours" type="number" placeholder="Hours"><br><br>
+
+<select id="engineer"></select><br><br>
+
+<select id="day">
+<option>Mon</option><option>Tue</option><option>Wed</option>
+<option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
+</select><br><br>
+
+<button class="btn primary" onclick="saveTask()">Save</button>
+<button onclick="closeModal()">Cancel</button>
+
+</div>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// 🔥 YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyDKzC3E7zAJE7lvt3V8Kb44jPC3h4rVyKI",
+  authDomain: "design-department-65255.firebaseapp.com",
+  databaseURL: "https://design-department-65255-default-rtdb.firebaseio.com",
+  projectId: "design-department-65255"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ===== DATA =====
+const engineers = ["KTM","DS","SP","SJ","AT","AA","VK","DN"];
+const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+let tasks = [];
+
+// ===== INIT UI =====
+const planner = document.getElementById("planner");
+const dashboard = document.getElementById("dashboard");
+const engSelect = document.getElementById("engineer");
+const filterSelect = document.getElementById("filterEng");
+
+// dropdowns
+engineers.forEach(e=>{
+  engSelect.innerHTML += `<option>${e}</option>`;
+  filterSelect.innerHTML += `<option>${e}</option>`;
+});
+
+// ===== CREATE GRID =====
+function renderGrid(){
+  planner.innerHTML = "";
+  days.forEach(day=>{
+    const div = document.createElement("div");
+    div.className="day";
+    div.innerHTML = `<b>${day}</b><div id="d_${day}"></div>`;
+    planner.appendChild(div);
+  });
+}
+
+// ===== RENDER TASKS =====
+function renderTasks(){
+
+  days.forEach(d=>{
+    document.getElementById("d_"+d).innerHTML="";
+  });
+
+  const filter = filterSelect.value;
+
+  tasks.forEach(t=>{
+    if(filter && t.engineer !== filter) return;
+
+    const el = document.createElement("div");
+    el.className="card";
+    el.innerHTML = `${t.name}<br>${t.engineer} (${t.hours}h)`;
+
+    document.getElementById("d_"+t.day).appendChild(el);
+  });
+
+  // dashboard
+  dashboard.innerHTML="";
+  engineers.forEach(e=>{
+    const total = tasks
+      .filter(t=>t.engineer===e)
+      .reduce((s,t)=>s+t.hours,0);
+
+    dashboard.innerHTML += `<div class="card">${e}: ${total}h</div>`;
+  });
+}
+
+// ===== SAVE TASK =====
+window.saveTask = async function(){
+
+  const name = document.getElementById("taskName").value;
+  const hours = Number(document.getElementById("hours").value);
+  const engineer = document.getElementById("engineer").value;
+  const day = document.getElementById("day").value;
+
+  if(!name || !hours){
+    alert("Fill all fields");
+    return;
+  }
+
+  const newRef = push(ref(db,"tasks"));
+
+  await set(newRef,{
+    name,
+    hours,
+    engineer,
+    day,
+    created: Date.now()
+  });
+
+  closeModal();
+};
+
+// ===== REALTIME SYNC =====
+onValue(ref(db,"tasks"), snap=>{
+  const data = snap.val();
+  tasks = data ? Object.values(data) : [];
+  renderTasks();
+});
+
+// ===== MODAL =====
+window.openModal = ()=> document.getElementById("modal").style.display="flex";
+window.closeModal = ()=> document.getElementById("modal").style.display="none";
+
+// ===== FILTER =====
+filterSelect.onchange = renderTasks;
+
+// ===== INIT =====
+renderGrid();
+
+</script>
+
+</body>
+</html>
