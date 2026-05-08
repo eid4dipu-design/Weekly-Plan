@@ -1,193 +1,754 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Engineering Planner</title>
-
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Engineering Weekly Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-body { font-family: system-ui; background:#F8F4EE; margin:0; padding:20px }
-h1 { color:#C67C2E }
-
-.topbar { display:flex; gap:10px; margin-bottom:20px }
-.btn { padding:8px 12px; border:none; border-radius:6px; cursor:pointer }
-.primary { background:#C67C2E; color:#fff }
-
-.card { background:#fff; border:1px solid #ddd; border-radius:10px; padding:8px; margin:5px }
-.grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px }
-.day { background:#fff; padding:10px; border-radius:8px; min-height:120px; border:1px solid #ddd }
-
-.modal {
- position:fixed; top:0; left:0; width:100%; height:100%;
- background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center;
-}
-.modal-content {
- background:#fff; padding:20px; border-radius:10px; width:300px;
-}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#F8F4EE;color:#1A1208}
+.inp{width:100%;background:#F2EDE4;border:1px solid #DDD0BB;color:#1A1208;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif}
+.card{background:#fff;border:1px solid #DDD0BB;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.lbl{font-size:10px;color:#9A7A50;font-weight:600;display:block;margin-bottom:4px;letter-spacing:.5px}
+.obtn{border:1px solid #DDD0BB;padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff;font-weight:600}
+.assign-btn{background:#C67C2E;border:none;color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif}
+.assign-btn:hover{background:#A05010}
+.prog-bar{height:8px;border-radius:4px;background:#F2EDE4;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s}
+select option{background:#fff;color:#1A1208}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#F2EDE4}
+::-webkit-scrollbar-thumb{background:#C8B898;border-radius:3px}
+.act-row:hover{background:#FDF3E7!important}
+.proj-row:hover{background:#FDF3E7!important}
+.tab-btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;transition:all .15s}
 </style>
-</head>
-
-<body>
-
-<h1>Engineering Planner</h1>
-
-<div class="topbar">
-<button class="btn primary" onclick="openModal()">+ Assign Task</button>
-
-<select id="filterEng">
-<option value="">All</option>
-</select>
-</div>
-
-<!-- GRID -->
-<div class="grid" id="planner"></div>
-
-<!-- DASHBOARD -->
-<h3>Engineer Load</h3>
-<div id="dashboard"></div>
-
-<!-- MODAL -->
-<div class="modal" id="modal">
-<div class="modal-content">
-
-<h3>Assign Task</h3>
-
-<input id="taskName" placeholder="Task"><br><br>
-<input id="hours" type="number" placeholder="Hours"><br><br>
-
-<select id="engineer"></select><br><br>
-
-<select id="day">
-<option>Mon</option><option>Tue</option><option>Wed</option>
-<option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
-</select><br><br>
-
-<button class="btn primary" onclick="saveTask()">Save</button>
-<button onclick="closeModal()">Cancel</button>
-
-</div>
-</div>
-
-<!-- FIREBASE -->
 <script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getDatabase,ref,set,onValue,push,remove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-// 🔥 YOUR FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyDKzC3E7zAJE7lvt3V8Kb44jPC3h4rVyKI",
-  authDomain: "design-department-65255.firebaseapp.com",
-  databaseURL: "https://design-department-65255-default-rtdb.firebaseio.com",
-  projectId: "design-department-65255"
+// ════════════════════════════════════════════════
+//  🔥 PASTE YOUR FIREBASE CONFIG HERE
+// ════════════════════════════════════════════════
+const firebaseConfig={
+  apiKey:"AIzaSyDKzC3E7zAJE7lvt3V8Kb44jPC3h4rVyKI",
+  authDomain:"design-department-65255.firebaseapp.com",
+  databaseURL:"https://design-department-65255-default-rtdb.firebaseio.com",
+  projectId:"design-department-65255",
+  storageBucket:"design-department-65255.firebasestorage.app",
+  messagingSenderId:"323619874913",
+  appId:"1:323619874913:web:a38462ecbc5e029846a220",measurementId:"G-L1GB8Y59X5"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// ── Constants ─────────────────────────────────────────────────────────────────
+const ENGINEERS=["KTM","DS","SP","SJ","AT","AA","VK","DN"];
+const DAYS=["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const STATUSES=["Planned","In Progress","Done","On Hold","Cancelled"];
+const PRIORITIES=["Low","Medium","High","Critical"];
+const ALL_PROJECTS=["Hero DGMS","Hero Flex gauge","Devagi TTS","LGB GMS","LGB MRT","Pragati Transmission","Mahindra CIE","Piano Presitel","Ather GM","Ather DOB","Srimukha TGM","Bharat gear length","Bharat gear Groove","Bharat gear F/R","Endurance MM","LeadWell MRT","Grinding fixture"];
+const ACTS=[
+  {id:1,name:"Creating new folder for new project in server",h:0.5},
+  {id:2,name:"Mfg guidline to save in the design folder",h:0.2},
+  {id:3,name:"Component modelling/master modelling",h:0.2},
+  {id:4,name:"Component modelling/master modelling checking",h:5},
+  {id:5,name:"Fixture design Modification",h:40},
+  {id:6,name:"SPM Fixture design",h:null},
+  {id:7,name:"Measurement Advanced",h:56},
+  {id:8,name:"GMS with DOB_Laser Marking",h:56},
+  {id:9,name:"Fixture 2D",h:8},
+  {id:10,name:"Fixture 2D checking",h:8},
+  {id:11,name:"Mate Writing",h:16},
+  {id:12,name:"For Drawing Set Resequane after Xerox",h:1},
+  {id:13,name:"Design audit",h:4.5},
+  {id:14,name:"Completion of design audit actions",h:8},
+  {id:15,name:"Gear matrix preparation",h:8},
+  {id:16,name:"CTQ Preparation",h:4.5},
+  {id:17,name:"Arraingment of fixture on table (Table selection)",h:4.5},
+  {id:18,name:"DAP Preparation",h:4.5},
+  {id:19,name:"DAP checking",h:1},
+  {id:20,name:"Table design",h:24},
+  {id:21,name:"Table 2D",h:8},
+  {id:22,name:"Table design checking",h:2.5},
+  {id:23,name:"APG/Locator/Arbor/Bool nose design",h:24},
+  {id:24,name:"APG/Locator/Arbor/Bool nose design checking",h:5},
+  {id:25,name:"Change piece design",h:3},
+  {id:26,name:"Change piece 2D",h:0.5},
+  {id:27,name:"Change piece design and 2D checking",h:2},
+  {id:28,name:"Sequence images preparation",h:1},
+  {id:29,name:"Safety cover design",h:4.5},
+  {id:30,name:"Safety cover 2D",h:1},
+  {id:31,name:"MC BOM / Pneu.BOM / BOP BOM preparation",h:1},
+  {id:32,name:"MC BOM / Pneu.BOM / BOP BOM preparation checking",h:2},
+  {id:33,name:"Pneumatic Ckt preparation",h:3},
+  {id:34,name:"Pneumatic Ckt checking",h:0.5},
+  {id:35,name:"Parameter plate design",h:2},
+  {id:36,name:"Parameter plate design checking",h:0.5},
+  {id:37,name:"ECN Preparation",h:0.5},
+  {id:38,name:"Service additional requirement handling",h:1},
+  {id:39,name:"Manual images and wear part list preparation",h:3},
+  {id:40,name:"Manual images and wear part list checking",h:0.5},
+  {id:41,name:"Rejection box design",h:5},
+  {id:42,name:"Rejection box 2D",h:3},
+  {id:43,name:"Rejection box checking",h:1},
+  {id:44,name:"Design dashboard updation",h:1},
+  {id:45,name:"Handling problems while assembly",h:4},
+];
+const AM=Object.fromEntries(ACTS.map(a=>[a.name,a]));
 
-// ===== DATA =====
-const engineers = ["KTM","DS","SP","SJ","AT","AA","VK","DN"];
-const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const EC={
+  KTM:{c:"#C67C2E",bg:"#FDF3E7",b:"#E8C090"},DS:{c:"#B89420",bg:"#FBF6E0",b:"#DDD090"},
+  SP:{c:"#B03A3A",bg:"#FDE8E8",b:"#E8A8A8"},SJ:{c:"#2E6A9C",bg:"#E8F2FB",b:"#A0C4E8"},
+  AT:{c:"#2E7A4A",bg:"#E8F5ED",b:"#90D0AA"},AA:{c:"#7A3A9C",bg:"#F3E8FB",b:"#C8A0E0"},
+  VK:{c:"#9C5A1A",bg:"#FBF0E2",b:"#DDB880"},DN:{c:"#C0392B",bg:"#FDE8E6",b:"#E8A090"},
+};
+const PC={
+  "Hero DGMS":"#C67C2E","Hero Flex gauge":"#B89420","Devagi TTS":"#2E6A9C","LGB GMS":"#2E7A4A","LGB MRT":"#7A3A9C",
+  "Pragati Transmission":"#9C5A1A","Mahindra CIE":"#C0392B","Piano Presitel":"#6A3A8C","Ather GM":"#1E7A50",
+  "Ather DOB":"#1E6A8C","Srimukha TGM":"#9C7A10","Bharat gear length":"#A04020","Bharat gear Groove":"#2E7A3A",
+  "Bharat gear F/R":"#A02860","Endurance MM":"#1A7A8C","LeadWell MRT":"#A05010","Grinding fixture":"#6A2A8C"
+};
+const gpc=p=>PC[p]||"#C67C2E";
+const SS={
+  "Planned":    {bg:"#EEF4FF",tx:"#2E5A9C",bd:"#B0C8F0",dot:"#4A90D9"},
+  "In Progress":{bg:"#FFF3E0",tx:"#B86010",bd:"#F0C880",dot:"#E8870A"},
+  "Done":       {bg:"#EEFAF2",tx:"#1E7A44",bd:"#90D4AA",dot:"#1E7A44"},
+  "On Hold":    {bg:"#FFFBE0",tx:"#9C7A10",bd:"#E0D080",dot:"#C8A020"},
+  "Cancelled":  {bg:"#FEF0EE",tx:"#B03030",bd:"#E8A090",dot:"#D06060"},
+  "Not Assigned":{bg:"#F2EDE4",tx:"#B89A70",bd:"#DDD0BB",dot:"#C8B090"},
+};
+const PRIO_C={Low:"#9A7A50",Medium:"#2E6A9C",High:"#C67C2E",Critical:"#C0392B"};
 
-let tasks = [];
+// ── State ─────────────────────────────────────────────────────────────────────
+let db,currentUser=null,isGuest=false;
+let tasks={},projects=[...ALL_PROJECTS];
+let currentMonday=getMonday(new Date());
+let mainTab="planner",activeEngTab="All",viewMode="grid";
+let fEng="All",fProj="All",fAct="All",fStat="All",fPri="All",fSearch="";
+let dbView="projects",dbFiltProj="All",dbFiltEng="All",dbFiltStat="All";
+let editTask=null;
 
-// ===== INIT UI =====
-const planner = document.getElementById("planner");
-const dashboard = document.getElementById("dashboard");
-const engSelect = document.getElementById("engineer");
-const filterSelect = document.getElementById("filterEng");
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getMonday(d){const c=new Date(d),day=c.getDay();c.setDate(c.getDate()-day+(day===0?-6:1));c.setHours(0,0,0,0);return c;}
+function wkDates(){return DAYS.map((_,i)=>{const d=new Date(currentMonday);d.setDate(currentMonday.getDate()+i);return d;});}
+function fD(d){return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"});}
+function fDK(d){return d.toISOString().slice(0,10);}
+function fT(ts){return ts?new Date(ts).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"—";}
+function allTasks(){return Object.entries(tasks).map(([k,t])=>({...t,key:k}));}
+function today(){return new Date();}
+function avatar(e,sz=24){const c=(EC[e]||{c:"#C67C2E"}).c;return`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:${sz*0.36}px;color:#fff;font-weight:800;flex-shrink:0">${e}</div>`;}
+function pill(s){const st=SS[s]||SS["Planned"];return`<span style="background:${st.bg};color:${st.tx};border:1px solid ${st.bd};border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap">${s}</span>`;}
+function stackedBar(items,total,h=28){
+  if(total===0)return`<div style="height:${h}px;background:#F2EDE4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#C8B090;font-style:italic">No tasks</div>`;
+  return`<div style="display:flex;border-radius:8px;overflow:hidden;height:${h}px;background:#F2EDE4">${items.filter(x=>x.v>0).map(x=>{const w=Math.round((x.v/total)*100);return`<div title="${x.s}: ${x.v} (${w}%)" style="width:${w}%;background:${x.c};display:flex;align-items:center;justify-content:center;font-size:${h>=28?10:8}px;color:#fff;font-weight:700;overflow:hidden;white-space:nowrap">${w>=8?x.v:""}</div>`;}).join("")}</div>`;
+}
 
-// dropdowns
-engineers.forEach(e=>{
-  engSelect.innerHTML += `<option>${e}</option>`;
-  filterSelect.innerHTML += `<option>${e}</option>`;
+// ── Firebase ──────────────────────────────────────────────────────────────────
+function initFirebase(){
+  try{
+    const app=initializeApp(firebaseConfig);db=getDatabase(app);
+    onValue(ref(db,"tasks"),snap=>{tasks=snap.val()||{};if(currentUser)renderPage();flashSync();});
+    onValue(ref(db,"projects"),snap=>{if(snap.val())projects=snap.val();if(currentUser)renderPage();});
+  }catch(e){console.warn("Firebase not configured");showBanner("⚠ Firebase not configured. Add your config on line 21.","#FEF0EE","#C0392B");}
+}
+function flashSync(){const el=document.getElementById("syncDot");if(el){el.textContent="● Live";el.style.color="#1E7A44";}}
+
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+async function saveTask(t){
+  if(!db){alert("Firebase not connected");return;}
+  const key=t.key||push(ref(db,"tasks")).key;
+  const d={...t,key:undefined,updatedBy:currentUser,updatedAt:Date.now()};
+  await set(ref(db,`tasks/${key}`),d);
+  toast(`✓ Task ${t.key?"updated":"assigned"} by ${currentUser}`);closeModal();
+}
+async function deleteTaskFb(key){
+  if(!db||!confirm("Delete this task?"))return;
+  await remove(ref(db,`tasks/${key}`));toast("✓ Deleted");closeModal();
+}
+async function saveProjects(){if(db)await set(ref(db,"projects"),projects);}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(task,defEng,defProj){
+  if(isGuest){toast("👁 View only");return;}
+  editTask=task?{...task}:{eng:defEng||ENGINEERS[0],proj:defProj||projects[0],act:ACTS[0].name,day:0,hrs:ACTS[0].h||1,stat:"Planned",pri:"Medium",note:""};
+  renderModal();document.getElementById("modal").style.display="flex";
+}
+function closeModal(){document.getElementById("modal").style.display="none";}
+
+function renderModal(){
+  const t=editTask,isNew=!t.key,wd=wkDates();
+  const ec=(EC[t.eng||ENGINEERS[0]]||EC.KTM);
+  document.getElementById("modalContent").innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="color:#C67C2E;font-size:11px;font-weight:700;letter-spacing:1px">${isNew?"ASSIGN / NEW TASK":"EDIT TASK"}</span>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#B89A70;line-height:1">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label class="lbl">ENGINEER</label>
+        <select id="mEng" class="inp" style="color:${ec.c};font-weight:600" onchange="onEngChange(this.value)">
+          ${ENGINEERS.map(e=>`<option value="${e}" ${e===t.eng?"selected":""}>${e}</option>`).join("")}
+        </select></div>
+      <div><label class="lbl">PROJECT</label>
+        <select id="mProj" class="inp" style="color:${gpc(t.proj)};font-weight:600">
+          ${projects.map(p=>`<option value="${p}" ${p===t.proj?"selected":""}>${p}</option>`).join("")}
+        </select></div>
+      <div style="grid-column:1/3"><label class="lbl">ACTIVITY <span style="color:#C8B090;font-weight:400">(auto-fills std hours)</span></label>
+        <select id="mAct" class="inp" style="color:#C67C2E;font-weight:600" onchange="onActChange(this.value)">
+          ${ACTS.map(a=>`<option value="${a.name}" ${a.name===t.act?"selected":""}>#${String(a.id).padStart(2,"0")} — ${a.name}${a.h?" ("+a.h+"h)":""}</option>`).join("")}
+        </select></div>
+      <div><label class="lbl">DAY</label>
+        <select id="mDay" class="inp">
+          ${wd.map((d,i)=>`<option value="${i}" ${i===t.day?"selected":""}>${DAYS[i]} ${fD(d)}</option>`).join("")}
+        </select></div>
+      <div><label class="lbl">HOURS <span id="stdHint" style="color:#C8B090;font-weight:400">${AM[t.act]?.h?"Std:"+AM[t.act].h+"h":""}</span></label>
+        <input type="number" id="mHrs" class="inp" value="${t.hrs||1}" min="0.5" max="24" step="0.5"/></div>
+      <div><label class="lbl">PRIORITY</label>
+        <select id="mPri" class="inp">${PRIORITIES.map(p=>`<option ${p===t.pri?"selected":""}>${p}</option>`).join("")}</select></div>
+      <div><label class="lbl">STATUS</label>
+        <select id="mStat" class="inp">${STATUSES.map(s=>`<option ${s===t.stat?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div style="grid-column:1/3"><label class="lbl">NOTE</label>
+        <input type="text" id="mNote" class="inp" value="${t.note||""}" placeholder="Task note..."/></div>
+    </div>
+    ${AM[t.act]?`<div style="margin-top:10px;background:#F2EDE4;border:1px solid #DDD0BB;border-radius:8px;padding:10px 14px;display:flex;gap:16px;flex-wrap:wrap">
+      <div><div style="font-size:9px;color:#C8B090">ACTIVITY #</div><div style="color:#C67C2E;font-weight:700;font-size:15px">#${AM[t.act].id}</div></div>
+      <div><div style="font-size:9px;color:#C8B090">STD HRS</div><div style="color:#B89420;font-weight:700;font-size:15px">${AM[t.act].h??"—"}h</div></div>
+      <div style="flex:1"><div style="font-size:9px;color:#C8B090">ACTIVITY</div><div style="color:#7A5C30;font-size:11px;line-height:1.4;margin-top:2px">${t.act}</div></div>
+    </div>`:""}
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="submitTask()" style="flex:1;padding:12px;background:#C67C2E;border:none;color:#fff;font-weight:700;font-size:14px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 3px 10px rgba(198,124,46,.3)">${isNew?"Assign Task":"Update Task"}</button>
+      ${!isNew?`<button onclick="deleteTaskFb('${t.key}')" style="padding:12px 16px;background:#FEF0EE;border:1px solid #E8A090;color:#C0392B;font-size:14px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600">Delete</button>`:""}
+    </div>`;
+}
+window.onActChange=v=>{const a=AM[v];if(a?.h)document.getElementById("mHrs").value=a.h;const h=document.getElementById("stdHint");if(h)h.textContent=a?.h?"Std:"+a.h+"h":"";};
+window.onEngChange=v=>{const s=document.getElementById("mEng");if(s)s.style.color=(EC[v]||EC.KTM).c;};
+window.submitTask=()=>saveTask({
+  eng:document.getElementById("mEng").value,proj:document.getElementById("mProj").value,
+  act:document.getElementById("mAct").value,day:Number(document.getElementById("mDay").value),
+  hrs:Number(document.getElementById("mHrs").value),pri:document.getElementById("mPri").value,
+  stat:document.getElementById("mStat").value,note:document.getElementById("mNote").value,key:editTask.key||null,
 });
 
-// ===== CREATE GRID =====
-function renderGrid(){
-  planner.innerHTML = "";
-  days.forEach(day=>{
-    const div = document.createElement("div");
-    div.className="day";
-    div.innerHTML = `<b>${day}</b><div id="d_${day}"></div>`;
-    planner.appendChild(div);
-  });
+// ── Render shell ──────────────────────────────────────────────────────────────
+function renderShell(){
+  const ec=isGuest?{c:"#2E6A9C"}:(EC[currentUser]||EC.KTM);
+  document.body.innerHTML=`
+  <div style="min-height:100vh;background:#F8F4EE">
+    <div style="background:#fff;border-bottom:2px solid #DDD0BB;padding:10px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);position:sticky;top:0;z-index:100">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <div style="width:9px;height:9px;border-radius:50%;background:#C67C2E"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#B89420"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#DDD0BB"></div>
+              <span style="color:#9A7A50;font-size:10px;font-weight:600;letter-spacing:1px">ENGINEERING · DESIGN</span>
+            </div>
+            <div style="font-size:18px;font-weight:800;color:#1A1208">Engineering Planner</div>
+          </div>
+          <div style="display:flex;gap:3px;background:#F2EDE4;border-radius:10px;padding:3px">
+            <button class="tab-btn" onclick="switchMain('planner')" id="mainTabP" style="background:${mainTab==="planner"?"#C67C2E":"transparent"};color:${mainTab==="planner"?"#fff":"#9A7A50"}">📅 Weekly Planner</button>
+            <button class="tab-btn" onclick="switchMain('dashboard')" id="mainTabD" style="background:${mainTab==="dashboard"?"#2E6A9C":"transparent"};color:${mainTab==="dashboard"?"#fff":"#9A7A50"}">📊 Project Dashboard</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="syncDot" style="color:#1E7A44;font-size:11px;font-weight:600">● Live</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${avatar(isGuest?"G":currentUser,24)}
+            <span style="font-size:11px;color:#7A5C30;font-weight:600">${currentUser}${isGuest?" (View)":""}</span>
+          </div>
+          ${!isGuest?`<button onclick="openModal(null,null,null)" style="background:#C67C2E;border:none;color:#fff;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;box-shadow:0 2px 8px rgba(198,124,46,.3)">+ Assign Task</button>`:""}
+          <button onclick="logout()" class="obtn" style="font-size:11px">Switch</button>
+        </div>
+      </div>
+      ${isGuest?`<div style="margin-top:4px;font-size:11px;color:#2E5A9C;background:#EEF4FF;border-radius:5px;padding:3px 10px;display:inline-block">👁 View only</div>`:""}
+    </div>
+    <div id="pageContent" style="padding:14px 20px"></div>
+    <div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeModal()">
+      <div id="modalContent" style="background:#fff;border:1px solid #DDD0BB;border-radius:14px;width:100%;max-width:560px;padding:24px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)"></div>
+    </div>
+    <div id="toast" style="position:fixed;bottom:20px;right:20px;background:#1E7A44;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:2000;opacity:0;transform:translateY(20px);transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.15)"></div>
+  </div>`;
 }
 
-// ===== RENDER TASKS =====
-function renderTasks(){
+function renderPage(){if(!currentUser){renderLogin();return;}renderShell();if(mainTab==="planner")renderPlanner();else renderDashboard();}
 
-  days.forEach(d=>{
-    document.getElementById("d_"+d).innerHTML="";
+// ── Login ─────────────────────────────────────────────────────────────────────
+function renderLogin(){
+  document.body.innerHTML=`
+  <div style="min-height:100vh;background:#F8F4EE;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="max-width:480px;width:100%;border-radius:16px;padding:32px;box-shadow:0 8px 32px rgba(0,0,0,.10)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px">
+          <div style="width:12px;height:12px;border-radius:50%;background:#C67C2E"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#B89420"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#DDD0BB"></div>
+        </div>
+        <h1 style="font-size:24px;font-weight:800;color:#1A1208;margin-bottom:6px">Engineering Planner</h1>
+        <p style="color:#9A7A50;font-size:13px;margin-bottom:10px">Weekly Planning · Project Dashboard · Task Assignment</p>
+        <div style="background:#EEF4FF;border:1px solid #B0C8F0;border-radius:8px;padding:8px 14px;font-size:12px;color:#2E6A9C">🔄 Real-time sync · Multi-user · Firebase</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <button onclick="setMode('eng')" id="tabEng" style="flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid #C67C2E;background:#FDF3E7;color:#C67C2E;font-family:'DM Sans',sans-serif">👷 Engineer</button>
+        <button onclick="setMode('guest')" id="tabGuest" style="flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid #DDD0BB;background:#fff;color:#9A7A50;font-family:'DM Sans',sans-serif">👁 View Only</button>
+      </div>
+      <div id="engSection">
+        <p style="font-size:13px;color:#7A5C30;margin-bottom:12px">Select your engineer ID:</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+          ${ENGINEERS.map(e=>`<button onclick="selEng('${e}')" id="eb-${e}" style="padding:12px 4px;border-radius:10px;cursor:pointer;border:2px solid #DDD0BB;background:#fff;font-family:'DM Sans',sans-serif">
+            <div style="width:32px;height:32px;border-radius:50%;background:${(EC[e]||EC.KTM).c};display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:800;margin:0 auto 5px">${e}</div>
+            <div style="font-size:11px;color:${(EC[e]||EC.KTM).c};font-weight:700">${e}</div>
+          </button>`).join("")}
+        </div>
+        <button onclick="loginEng()" id="loginBtn" style="width:100%;padding:12px;background:#E0D0C0;border:none;color:#fff;font-weight:700;font-size:14px;border-radius:9px;cursor:not-allowed;font-family:'DM Sans',sans-serif">Select your ID above</button>
+      </div>
+      <div id="guestSection" style="display:none">
+        <p style="font-size:13px;color:#7A5C30;margin-bottom:10px">Your name (optional):</p>
+        <input id="guestName" type="text" placeholder="e.g. Manager, HOD..." class="inp" style="margin-bottom:14px"/>
+        <button onclick="loginGuest()" style="width:100%;padding:12px;background:#2E6A9C;border:none;color:#fff;font-weight:700;font-size:14px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif">Enter as Viewer →</button>
+      </div>
+      <div id="banner" style="display:none;margin-top:14px;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6"></div>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid #EDE4D6;font-size:11px;color:#9A7A50;line-height:1.7">
+        ⚙️ <b>Setup:</b> Go to <a href="https://console.firebase.google.com" target="_blank" style="color:#C67C2E">console.firebase.google.com</a> → Create project → Realtime Database → paste config on line 21 of this file.
+      </div>
+    </div>
+  </div>`;
+  window._sel=null;
+}
+window.setMode=m=>{
+  document.getElementById("engSection").style.display=m==="eng"?"block":"none";
+  document.getElementById("guestSection").style.display=m==="guest"?"block":"none";
+  document.getElementById("tabEng").style.cssText=`flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid ${m==="eng"?"#C67C2E":"#DDD0BB"};background:${m==="eng"?"#FDF3E7":"#fff"};color:${m==="eng"?"#C67C2E":"#9A7A50"};font-family:'DM Sans',sans-serif`;
+  document.getElementById("tabGuest").style.cssText=`flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid ${m==="guest"?"#2E6A9C":"#DDD0BB"};background:${m==="guest"?"#EEF4FF":"#fff"};color:${m==="guest"?"#2E6A9C":"#9A7A50"};font-family:'DM Sans',sans-serif`;
+};
+window.selEng=e=>{
+  window._sel=e;
+  ENGINEERS.forEach(eng=>{const b=document.getElementById(`eb-${eng}`);if(b){b.style.borderColor=eng===e?(EC[eng]||EC.KTM).c:"#DDD0BB";b.style.background=eng===e?(EC[eng]||EC.KTM).bg:"#fff";}});
+  const lb=document.getElementById("loginBtn");lb.textContent=`Enter as ${e} →`;lb.style.background="#C67C2E";lb.style.cursor="pointer";
+};
+window.loginEng=()=>{if(!window._sel)return;currentUser=window._sel;isGuest=false;renderPage();};
+window.loginGuest=()=>{currentUser=document.getElementById("guestName")?.value||"Guest";isGuest=true;renderPage();};
+
+// ── Planner ───────────────────────────────────────────────────────────────────
+function renderPlanner(){
+  const wd=wkDates(),at=allTasks();
+  const ft=at.filter(t=>{
+    if(fEng!=="All"&&t.eng!==fEng)return false;
+    if(fProj!=="All"&&t.proj!==fProj)return false;
+    if(fAct!=="All"&&t.act!==fAct)return false;
+    if(fStat!=="All"&&t.stat!==fStat)return false;
+    if(fPri!=="All"&&t.pri!==fPri)return false;
+    if(fSearch){const q=fSearch.toLowerCase();if(![t.eng,t.proj,t.act,t.note||"",t.stat].some(v=>v.toLowerCase().includes(q)))return false;}
+    return true;
   });
+  const disp=activeEngTab==="All"?ft:ft.filter(t=>t.eng===activeEngTab);
+  const totalH=ft.reduce((s,t)=>s+t.hrs,0);
+  const weekStr=`${fD(wd[0])} — ${fD(wd[6])} ${wd[0].getFullYear()}`;
+  const todayKey=fDK(today());
+  const anyFil=fEng!=="All"||fProj!=="All"||fAct!=="All"||fStat!=="All"||fPri!=="All"||fSearch;
 
-  const filter = filterSelect.value;
+  document.getElementById("pageContent").innerHTML=`
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button onclick="prevWeek()" class="obtn" style="color:#9A7A50">◀</button>
+    <div style="background:#F2EDE4;border:1px solid #DDD0BB;padding:7px 14px;border-radius:7px;font-size:12px;color:#C67C2E;font-weight:700;min-width:175px;text-align:center;font-family:'DM Mono',monospace">${weekStr}</div>
+    <button onclick="nextWeek()" class="obtn" style="color:#9A7A50">▶</button>
+    <button onclick="goToday()" class="obtn" style="color:#1E7A44;border-color:#1E7A44;background:#EDFAF3">Today</button>
+    <button onclick="toggleView()" class="obtn">${viewMode==="grid"?"≡ List":"⊞ Grid"}</button>
+  </div>
 
-  tasks.forEach(t=>{
-    if(filter && t.engineer !== filter) return;
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">
+    ${[{l:"Total Tasks",v:ft.length,c:"#C67C2E",bg:"#FDF3E7"},{l:"Total Hours",v:totalH+"h",c:"#B89420",bg:"#FBF6E0"},{l:"In Progress",v:ft.filter(t=>t.stat==="In Progress").length,c:"#B86010",bg:"#FFF3E0"},{l:"Planned",v:ft.filter(t=>t.stat==="Planned").length,c:"#2E5A9C",bg:"#EEF4FF"},{l:"Done",v:ft.filter(t=>t.stat==="Done").length,c:"#1E7A44",bg:"#EEFAF2"},{l:"Critical",v:ft.filter(t=>t.pri==="Critical").length,c:"#C0392B",bg:"#FEF0EE"}]
+    .map(s=>`<div style="background:${s.bg};border:1px solid #DDD0BB;border-radius:9px;padding:10px 12px"><div style="font-size:21px;font-weight:800;color:${s.c}">${s.v}</div><div style="font-size:10px;color:#9A7A50;margin-top:1px">${s.l}</div></div>`).join("")}
+  </div>
 
-    const el = document.createElement("div");
-    el.className="card";
-    el.innerHTML = `${t.name}<br>${t.engineer} (${t.hours}h)`;
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:10px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:8px">FILTERS & SEARCH</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;overflow-x:auto;min-width:580px">
+      <div style="position:relative"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#B89A70">🔍</span>
+        <input id="srchInp" type="text" value="${fSearch}" oninput="fSearch=this.value;renderPlanner()" placeholder="Search..." class="inp" style="padding-left:32px"/></div>
+      ${[{k:"fEng",cur:fEng,opts:["All",...ENGINEERS]},{k:"fProj",cur:fProj,opts:["All",...projects]},{k:"fAct",cur:fAct,opts:["All",...ACTS.map(a=>a.name)]},{k:"fStat",cur:fStat,opts:["All",...STATUSES]},{k:"fPri",cur:fPri,opts:["All",...PRIORITIES]}]
+      .map(f=>`<select class="inp" style="font-size:11px;padding:7px 8px" onchange="window['${f.k}']=this.value;renderPlanner()">
+        ${f.opts.map(o=>`<option value="${o}" ${o===f.cur?"selected":""}>${f.k==="fAct"&&o!=="All"?o.slice(0,20)+(o.length>20?"…":""):o}</option>`).join("")}
+      </select>`).join("")}
+    </div>
+    ${anyFil?`<button onclick="clearFilters()" style="margin-top:8px;background:#FEF0EE;border:1px solid #E8A090;color:#C0392B;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif">✕ Clear Filters</button>`:""}
+  </div>
 
-    document.getElementById("d_"+t.day).appendChild(el);
-  });
+  <div style="display:flex;gap:5px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px">
+    ${["All",...ENGINEERS].map(tab=>{
+      const act=activeEngTab===tab;
+      const ec=tab==="All"?"#C67C2E":(EC[tab]||EC.KTM).c;
+      const cnt=tab==="All"?ft.length:ft.filter(x=>x.eng===tab).length;
+      const hrs=tab==="All"?totalH:ft.filter(x=>x.eng===tab).reduce((s,x)=>s+x.hrs,0);
+      return`<button onclick="setEngTab('${tab}')" style="background:${act?ec:"#fff"};border:1.5px solid ${act?ec:"#DDD0BB"};color:${act?"#fff":ec};padding:6px 12px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:${act?700:500};white-space:nowrap;font-family:'DM Sans',sans-serif">${tab}${cnt>0?` <span style="opacity:.8;font-size:10px">(${cnt}·${hrs}h)</span>`:""}</button>`;
+    }).join("")}
+  </div>
 
-  // dashboard
-  dashboard.innerHTML="";
-  engineers.forEach(e=>{
-    const total = tasks
-      .filter(t=>t.engineer===e)
-      .reduce((s,t)=>s+t.hours,0);
+  ${viewMode==="grid"?renderGrid(ft,wd,todayKey,disp):renderList(disp,wd)}
 
-    dashboard.innerHTML += `<div class="card">${e}: ${total}h</div>`;
-  });
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    <div class="card">
+      <div style="font-size:10px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:10px">ENGINEER HOURS THIS WEEK</div>
+      ${ENGINEERS.map(e=>{const h=ft.filter(t=>t.eng===e).reduce((s,t)=>s+t.hrs,0);const col=h>=8?"#C0392B":h>=6?"#B89420":(EC[e]||EC.KTM).c;
+        return`<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <div style="display:flex;align-items:center;gap:6px">${avatar(e,20)}<span style="font-size:12px;color:#1A1208;font-weight:600">${e}</span></div>
+            <span style="font-size:12px;font-weight:700;color:${col}">${h}h</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" style="background:${col};width:${Math.min(100,(h/10)*100)}%"></div></div>
+        </div>`;}).join("")}
+    </div>
+    <div class="card">
+      <div style="font-size:10px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:10px">PROJECTS (${projects.length})</div>
+      ${!isGuest?`<div style="display:flex;gap:7px;margin-bottom:10px"><input type="text" id="newProjInp" placeholder="Add new project..." class="inp" style="flex:1"/><button onclick="addProj()" style="background:#C67C2E;border:none;color:#fff;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:16px;font-weight:700">+</button></div>`:""}
+      <div style="max-height:155px;overflow-y:auto">${projects.map((p,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 2px;border-bottom:1px solid #F2EDE4">
+        <div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:${gpc(p)};flex-shrink:0"></div><span style="font-size:12px;color:${gpc(p)};font-weight:600">${p}</span></div>
+        ${!isGuest?`<button onclick="removeProj(${i})" style="background:none;border:none;color:#C8B090;cursor:pointer;font-size:14px;padding:0 4px">✕</button>`:""}
+      </div>`).join("")}</div>
+    </div>
+  </div>`;
 }
 
-// ===== SAVE TASK =====
-window.saveTask = async function(){
+function renderGrid(ft,wd,todayKey,disp){
+  const engs=activeEngTab==="All"?ENGINEERS:[activeEngTab];
+  return`<div style="overflow-x:auto"><div style="min-width:920px">
+    <div style="display:grid;grid-template-columns:76px repeat(7,1fr);gap:4px;margin-bottom:4px">
+      <div></div>
+      ${wd.map((d,i)=>{const isT=fDK(d)===todayKey;return`<div style="background:${isT?"#FDF3E7":"#fff"};border:${isT?"1.5px solid #C67C2E":"1px solid #DDD0BB"};border-radius:7px;padding:7px 5px;text-align:center;${isT?"box-shadow:0 2px 8px rgba(198,124,46,.15)":""}">
+        <div style="font-size:9px;color:${isT?"#C67C2E":"#C8B090"};font-weight:600;letter-spacing:1px">${DAYS[i]}</div>
+        <div style="font-size:11px;font-weight:700;color:${isT?"#C67C2E":"#1A1208"};margin-top:1px">${fD(d)}</div>
+      </div>`;}).join("")}
+    </div>
+    ${engs.map(eng=>{
+      const ec=(EC[eng]||EC.KTM);
+      const engH=ft.filter(t=>t.eng===eng).reduce((s,t)=>s+t.hrs,0);
+      return`<div style="display:grid;grid-template-columns:76px repeat(7,1fr);gap:4px;margin-bottom:4px">
+        <div style="background:${ec.bg};border:1.5px solid ${ec.b};border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px">
+          ${avatar(eng,30)}<div style="font-size:9px;color:${ec.c};font-weight:600;margin-top:3px">${engH}h</div>
+        </div>
+        ${wd.map((_,di)=>{
+          const ct=disp.filter(t=>t.eng===eng&&t.day===di);
+          const isT=fDK(wd[di])===todayKey;
+          return`<div onclick="if(${ct.length}===0&&!${isGuest})openModal(null,'${eng}',${di})"
+            style="background:${isT?"#FFFCF5":"#fff"};border:1px solid ${isT?"#E8C890":"#DDD0BB"};border-radius:7px;min-height:65px;padding:3px;cursor:${ct.length===0&&!isGuest?"pointer":"default"};position:relative"
+            onmouseover="if(${ct.length}===0&&!${isGuest})this.style.borderColor='#C67C2E'" onmouseout="this.style.borderColor='${isT?"#E8C890":"#DDD0BB"}'"
+          >
+            ${ct.length===0&&!isGuest?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#DDD0BB;font-size:18px;opacity:.5">+</div>`:""}
+            ${ct.map(t=>{
+              const ss=SS[t.stat]||SS["Planned"];const pc=gpc(t.proj);const a=AM[t.act];
+              return`<div onclick="event.stopPropagation();${!isGuest?`openModal(${JSON.stringify(t).replace(/"/g,"&quot;")})`:""}"
+                style="background:${ss.bg};border:1px solid ${ss.bd};border-left:3px solid ${pc};border-radius:5px;padding:4px 6px;margin-bottom:3px;cursor:${isGuest?"default":"pointer"}"
+                onmouseover="${!isGuest?"this.style.opacity='.75'":""}" onmouseout="this.style.opacity='1'"
+              >
+                ${a?`<div style="font-size:8px;color:#C8B090">#${a.id}</div>`:""}
+                <div style="font-size:9px;color:${ss.tx};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.act.length>20?t.act.slice(0,20)+"…":t.act}</div>
+                <div style="font-size:8px;color:${pc};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.proj.length>15?t.proj.slice(0,15)+"…":t.proj}</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="font-size:8px;color:#9A7A50">${t.hrs}h</span>${t.updatedBy?`<span style="font-size:7px;color:#C8B090">${t.updatedBy}</span>`:""}</div>
+              </div>`;}).join("")}
+          </div>`;}).join("")}
+      </div>`;}).join("")}
+  </div></div>`;
+}
 
-  const name = document.getElementById("taskName").value;
-  const hours = Number(document.getElementById("hours").value);
-  const engineer = document.getElementById("engineer").value;
-  const day = document.getElementById("day").value;
+function renderList(disp,wd){
+  return`<div class="card" style="overflow:hidden">
+    <div style="display:grid;grid-template-columns:28px 48px 52px 1fr 1.4fr 80px 50px 70px 84px ${!isGuest?"44px":""};padding:8px 12px;background:#F2EDE4;border-bottom:1px solid #DDD0BB;font-size:9px;color:#9A7A50;font-weight:700;letter-spacing:1px;gap:6px;min-width:820px">
+      <span>#</span><span>ID</span><span>ENG</span><span>PROJECT</span><span>ACTIVITY</span><span>DAY</span><span>HRS</span><span>PRIORITY</span><span>STATUS</span>${!isGuest?"<span></span>":""}
+    </div>
+    <div style="overflow-x:auto">
+      ${disp.length===0?`<div style="padding:36px;text-align:center;color:#C8B090;font-size:13px;font-style:italic">No tasks found.</div>`:""}
+      ${disp.map((t,i)=>{
+        const ss=SS[t.stat]||SS["Planned"];const pc=gpc(t.proj);const a=AM[t.act];
+        return`<div style="display:grid;grid-template-columns:28px 48px 52px 1fr 1.4fr 80px 50px 70px 84px ${!isGuest?"44px":""};padding:9px 12px;border-bottom:${i<disp.length-1?"1px solid #F2EDE4":"none"};font-size:11px;gap:6px;background:${i%2===0?"#fff":"#F8F4EE"};min-width:820px" class="proj-row">
+          <span style="color:#C8B090;font-size:10px">${i+1}</span>
+          <span style="color:#C8B090;font-size:9px">${t.key?.slice(-4)||"—"}</span>
+          ${avatar(t.eng,22)}
+          <span style="color:${pc};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.proj}</span>
+          <div style="overflow:hidden">${a?`<span style="font-size:9px;color:#C8B090;margin-right:3px">#${a.id}</span>`:""}<span style="color:#1A1208">${t.act.length>28?t.act.slice(0,28)+"…":t.act}</span></div>
+          <span style="color:#B89A70;font-size:10px">${DAYS[t.day]} ${fD(wd[t.day])}</span>
+          <span style="color:#B89420;font-weight:700">${t.hrs}h</span>
+          <span style="color:${PRIO_C[t.pri]||"#9A7A50"};font-weight:600;font-size:10px">${t.pri}</span>
+          <span style="background:${ss.bg};color:${ss.tx};border:1px solid ${ss.bd};border-radius:12px;padding:2px 6px;font-size:9px;font-weight:700;text-align:center;white-space:nowrap">${t.stat}</span>
+          ${!isGuest?`<button onclick="openModal(${JSON.stringify(t).replace(/"/g,"&quot;")})" style="background:#F2EDE4;border:1px solid #DDD0BB;color:#7A5C30;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:600;font-family:'DM Sans',sans-serif">Edit</button>`:""}
+        </div>`;}).join("")}
+    </div>
+  </div>`;
+}
 
-  if(!name || !hours){
-    alert("Fill all fields");
-    return;
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const at=allTasks();
+  let ft=at;
+  if(dbFiltEng!=="All")ft=ft.filter(t=>t.eng===dbFiltEng);
+  if(dbFiltStat!=="All")ft=ft.filter(t=>t.stat===dbFiltStat);
+
+  const totalH=at.reduce((s,t)=>s+t.hrs,0);
+  const byS=s=>at.filter(t=>t.stat===s).length;
+
+  const engLoad=ENGINEERS.map(e=>({
+    e,h:at.filter(t=>t.eng===e).reduce((s,t)=>s+t.hrs,0),cnt:at.filter(t=>t.eng===e).length,
+    done:at.filter(t=>t.eng===e&&t.stat==="Done").length,prog:at.filter(t=>t.eng===e&&t.stat==="In Progress").length,
+    plan:at.filter(t=>t.eng===e&&t.stat==="Planned").length,hold:at.filter(t=>t.eng===e&&t.stat==="On Hold").length,
+  }));
+  const maxH=Math.max(...engLoad.map(x=>x.h),1);
+  const least=[...engLoad].sort((a,b)=>a.h-b.h).slice(0,3);
+
+  const projData=projects.map(p=>{
+    const pt=at.filter(t=>t.proj===p);
+    const done=pt.filter(t=>t.stat==="Done").length,prog=pt.filter(t=>t.stat==="In Progress").length;
+    const plan=pt.filter(t=>t.stat==="Planned").length,hold=pt.filter(t=>t.stat==="On Hold").length;
+    const canc=pt.filter(t=>t.stat==="Cancelled").length,total=pt.length;
+    const hours=pt.reduce((s,t)=>s+t.hrs,0);
+    const engs=[...new Set(pt.map(t=>t.eng))];
+    const pct=total===0?0:Math.round((done/total)*100);
+    return{p,pt,done,prog,plan,hold,canc,total,hours,engs,pct,col:gpc(p)};
+  });
+  const visPj=dbFiltProj==="All"?projData.filter(x=>x.total>0):projData.filter(x=>x.p===dbFiltProj);
+
+  const actC={};ft.forEach(t=>{actC[t.act]=(actC[t.act]||0)+1;});
+  const topActs=Object.entries(actC).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxA=topActs[0]?.[1]||1;
+
+  const stacks=[{s:"Done",c:"#1E7A44"},{s:"In Progress",c:"#E8870A"},{s:"Planned",c:"#4A90D9"},{s:"On Hold",c:"#C8A020"},{s:"Cancelled",c:"#D06060"}];
+
+  document.getElementById("pageContent").innerHTML=`
+  <!-- Overall stats -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px">
+    ${[{l:"Total Tasks",v:at.length,c:"#C67C2E",bg:"#FDF3E7"},{l:"Total Hours",v:totalH+"h",c:"#B89420",bg:"#FBF6E0"},{l:"Done",v:byS("Done"),c:"#1E7A44",bg:"#EEFAF2"},{l:"In Progress",v:byS("In Progress"),c:"#B86010",bg:"#FFF3E0"},{l:"Planned",v:byS("Planned"),c:"#2E5A9C",bg:"#EEF4FF"},{l:"On Hold",v:byS("On Hold"),c:"#9C7A10",bg:"#FFFBE0"},{l:"Projects",v:projects.length,c:"#7A3A9C",bg:"#F3E8FB"}]
+    .map(s=>`<div style="background:${s.bg};border:1px solid #DDD0BB;border-radius:9px;padding:10px 12px"><div style="font-size:21px;font-weight:800;color:${s.c}">${s.v}</div><div style="font-size:10px;color:#9A7A50;margin-top:1px">${s.l}</div></div>`).join("")}
+  </div>
+
+  <!-- Filter + View tabs -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="inp" style="width:auto;min-width:165px;font-size:11px;color:${dbFiltProj==="All"?"#9A7A50":gpc(dbFiltProj)};font-weight:${dbFiltProj==="All"?400:600}" onchange="dbFiltProj=this.value;renderDashboard()">
+          <option value="All">All Projects</option>
+          ${projects.map(p=>`<option value="${p}" ${p===dbFiltProj?"selected":""}>${p}</option>`).join("")}
+        </select>
+        <select class="inp" style="width:auto;min-width:130px;font-size:11px;color:${dbFiltEng==="All"?"#9A7A50":(EC[dbFiltEng]||EC.KTM).c};font-weight:${dbFiltEng==="All"?400:600}" onchange="dbFiltEng=this.value;renderDashboard()">
+          <option value="All">All Engineers</option>
+          ${ENGINEERS.map(e=>`<option value="${e}" ${e===dbFiltEng?"selected":""}>${e}</option>`).join("")}
+        </select>
+        <select class="inp" style="width:auto;min-width:130px;font-size:11px" onchange="dbFiltStat=this.value;renderDashboard()">
+          <option value="All">All Statuses</option>
+          ${STATUSES.map(s=>`<option value="${s}" ${s===dbFiltStat?"selected":""}>${s}</option>`).join("")}
+        </select>
+        ${dbFiltProj!=="All"||dbFiltEng!=="All"||dbFiltStat!=="All"?`<button onclick="dbFiltProj='All';dbFiltEng='All';dbFiltStat='All';renderDashboard()" style="background:#FEF0EE;border:1px solid #E8A090;color:#C0392B;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif">✕ Clear</button>`:""}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${[["projects","📋 Projects"],["workload","👷 Workload"],["activities","📊 Activities"]].map(([v,lbl])=>`<button onclick="dbView='${v}';renderDashboard()" style="padding:6px 12px;border-radius:7px;border:1px solid ${dbView===v?"#C67C2E":"#DDD0BB"};background:${dbView===v?"#FDF3E7":"#fff"};color:${dbView===v?"#C67C2E":"#9A7A50"};font-size:11px;font-weight:${dbView===v?700:500};cursor:pointer;font-family:'DM Sans',sans-serif">${lbl}</button>`).join("")}
+        ${!isGuest?`<button onclick="openModal(null,null,null)" class="assign-btn">+ Assign Task</button>`:""}
+      </div>
+    </div>
+  </div>
+
+  ${dbView==="projects"?renderDbProjects(projData,visPj,stacks):""}
+  ${dbView==="workload"?renderDbWorkload(engLoad,least,maxH,stacks):""}
+  ${dbView==="activities"?renderDbActivities(topActs,maxA,ft):""}
+  `;
+}
+
+// ── Dashboard: Projects ───────────────────────────────────────────────────────
+function renderDbProjects(projData,visPj,stacks){
+  // If a single project selected → show all 45 activities with status
+  if(dbFiltProj!=="All"){
+    const sel=projData.find(x=>x.p===dbFiltProj);
+    if(!sel)return`<div class="card" style="text-align:center;color:#C8B090;padding:40px;font-style:italic">No data found.</div>`;
+    const{p,pt,done,prog,plan,hold,canc,total,hours,engs,pct,col}=sel;
+
+    const statMeta=[
+      {s:"Done",c:"#1E7A44",bg:"#EEFAF2",bd:"#90D4AA",dot:"#1E7A44"},
+      {s:"In Progress",c:"#B86010",bg:"#FFF3E0",bd:"#F0C880",dot:"#E8870A"},
+      {s:"Planned",c:"#2E5A9C",bg:"#EEF4FF",bd:"#B0C8F0",dot:"#4A90D9"},
+      {s:"On Hold",c:"#9C7A10",bg:"#FFFBE0",bd:"#E0D080",dot:"#C8A020"},
+      {s:"Cancelled",c:"#B03030",bg:"#FEF0EE",bd:"#E8A090",dot:"#D06060"},
+      {s:"Not Assigned",c:"#B89A70",bg:"#F2EDE4",bd:"#DDD0BB",dot:"#C8B090"},
+    ];
+    const sMap=Object.fromEntries(statMeta.map(x=>[x.s,x]));
+
+    return`
+    <!-- Project header -->
+    <div class="card" style="margin-bottom:14px;border-left:5px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+            <div style="width:14px;height:14px;border-radius:50%;background:${col}"></div>
+            <span style="font-size:18px;font-weight:800;color:#1A1208">${p}</span>
+            <span style="font-size:12px;color:#B89A70">${total} tasks · ${hours}h total</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${engs.map(e=>avatar(e,24)).join("")}${engs.length===0?`<span style="font-size:11px;color:#C8B090;font-style:italic">No engineers assigned</span>`:""}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${[{s:"Done",v:done,c:"#1E7A44"},{s:"In Progress",v:prog,c:"#E8870A"},{s:"Planned",v:plan,c:"#4A90D9"},{s:"On Hold",v:hold,c:"#C8A020"},{s:"Cancelled",v:canc,c:"#D06060"}]
+            .map(x=>`<div style="display:flex;align-items:center;gap:5px;background:${x.c}14;border:1px solid ${x.c}40;border-radius:20px;padding:3px 10px"><div style="width:8px;height:8px;border-radius:50%;background:${x.c}"></div><span style="font-size:11px;color:${x.c};font-weight:700">${x.s}: ${x.v}</span></div>`).join("")}
+          </div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:36px;font-weight:800;color:${pct>=75?"#1E7A44":pct>=40?"#B86010":"#C0392B"};line-height:1">${pct}%</div>
+          <div style="font-size:11px;color:#B89A70;margin-top:4px">Completion</div>
+          ${stackedBar([{s:"Done",v:done,c:"#1E7A44"},{s:"In Progress",v:prog,c:"#E8870A"},{s:"Planned",v:plan,c:"#4A90D9"},{s:"On Hold",v:hold,c:"#C8A020"},{s:"Cancelled",v:canc,c:"#D06060"}],total,10)}
+        </div>
+      </div>
+    </div>
+
+    <!-- Colour legend -->
+    <div class="card" style="margin-bottom:12px;padding:10px 16px">
+      <div style="font-size:10px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:8px">STATUS COLOUR LEGEND</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${statMeta.map(x=>`<div style="display:flex;align-items:center;gap:6px;background:${x.bg};border:1px solid ${x.bd};border-radius:8px;padding:5px 12px"><div style="width:10px;height:10px;border-radius:50%;background:${x.dot};flex-shrink:0"></div><span style="font-size:11px;color:${x.c};font-weight:700">${x.s}</span></div>`).join("")}
+      </div>
+    </div>
+
+    <!-- All 45 activities table -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:12px;color:#9A7A50;font-weight:700;letter-spacing:1px">ALL 45 ACTIVITIES — ${p.toUpperCase()}</div>
+        ${!isGuest?`<button onclick="openModal(null,null,'${p.replace(/'/g,"\\'")}')" class="assign-btn">+ Assign Activity</button>`:""}
+      </div>
+      <!-- Header -->
+      <div style="display:grid;grid-template-columns:36px 34px 1fr 120px 56px 52px 108px 40px;gap:8px;padding:8px 12px;background:#F2EDE4;border-radius:6px 6px 0 0;border:1px solid #DDD0BB;border-bottom:none;font-size:9px;color:#9A7A50;font-weight:700;letter-spacing:1px">
+        <span>#</span><span>ID</span><span>ACTIVITY NAME</span><span>ENGINEER</span><span>HRS</span><span>STD H</span><span>STATUS</span><span></span>
+      </div>
+      <div style="border:1px solid #DDD0BB;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+        ${ACTS.map((act,i)=>{
+          const actTasks=pt.filter(t=>t.act===act.name);
+          const hasT=actTasks.length>0;
+          const t=actTasks[0];
+          const stat=hasT?t.stat:"Not Assigned";
+          const sm=sMap[stat]||sMap["Not Assigned"];
+          return`<div class="act-row" style="display:grid;grid-template-columns:36px 34px 1fr 120px 56px 52px 108px 40px;gap:8px;padding:10px 12px;border-bottom:${i<ACTS.length-1?"1px solid #F2EDE4":"none"};background:${sm.bg};border-left:4px solid ${sm.dot}">
+            <span style="font-size:10px;color:#C8B090;font-weight:600">${i+1}</span>
+            <span style="font-size:10px;background:#F2EDE4;border-radius:4px;padding:1px 5px;color:#C67C2E;font-weight:700;text-align:center;height:fit-content">#${act.id}</span>
+            <span style="font-size:12px;color:${hasT?"#1A1208":"#B89A70"};font-weight:${hasT?600:400};line-height:1.4">${act.name}</span>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+              ${hasT?actTasks.map(tt=>`<div style="display:flex;align-items:center;gap:4px">${avatar(tt.eng,20)}<span style="font-size:11px;color:${(EC[tt.eng]||EC.KTM).c};font-weight:700">${tt.eng}</span></div>`).join(""):`<span style="font-size:10px;color:#C8B090;font-style:italic">—</span>`}
+            </div>
+            <span style="font-size:12px;font-weight:700;color:${hasT?"#B89420":"#C8B090"}">${hasT?t.hrs+"h":"—"}</span>
+            <span style="font-size:10px;color:#B89A70">${act.h?act.h+"h":"—"}</span>
+            <span style="background:${sm.bg};color:${sm.c};border:1px solid ${sm.bd};border-radius:12px;padding:3px 8px;font-size:10px;font-weight:700;text-align:center;white-space:nowrap;opacity:${hasT?1:0.65}">${stat}</span>
+            ${!isGuest?(hasT?`<button onclick="openModal(${JSON.stringify(t).replace(/"/g,"&quot;")})" style="background:#F2EDE4;border:1px solid #DDD0BB;color:#7A5C30;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:600;font-family:'DM Sans',sans-serif">Edit</button>`
+              :`<button onclick="openModal({act:'${act.name.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',hrs:${act.h||1}},null,'${p.replace(/'/g,"\\'")}')" style="background:${col};border:none;color:#fff;padding:3px 7px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:700;font-family:'DM Sans',sans-serif">+ Add</button>`):""}
+          </div>`;}).join("")}
+      </div>
+    </div>`;
   }
 
-  const newRef = push(ref(db,"tasks"));
+  // All projects → summary cards
+  return`<div class="card">
+    <div style="font-size:12px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:4px">PROJECT WISE TASK STATUS — ${visPj.length} PROJECTS</div>
+    <div style="font-size:11px;color:#C8B090;margin-bottom:16px">Select a project above to see all 45 activities with status</div>
+    ${visPj.length===0?`<div style="text-align:center;color:#C8B090;padding:40px;font-style:italic">No projects with tasks. Click "+ Assign Task" to start.</div>`:""}
+    ${visPj.map(({p,done,prog,plan,hold,canc,total,hours,engs,pct,col})=>`
+    <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #F2EDE4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="width:12px;height:12px;border-radius:50%;background:${col};flex-shrink:0"></div>
+          <span onclick="dbFiltProj='${p}';renderDashboard()" style="font-size:15px;font-weight:800;color:#1A1208;cursor:pointer;text-decoration:underline;text-decoration-color:${col}55">${p}</span>
+          <span style="font-size:11px;color:#B89A70">${total} tasks · ${hours}h</span>
+          <div style="display:flex;gap:3px">${engs.map(e=>avatar(e,20)).join("")}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:${pct>=75?"#1E7A44":pct>=40?"#B86010":"#C0392B"}">${pct}%</span>
+          <button onclick="dbFiltProj='${p}';renderDashboard()" style="background:${col};border:none;color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif">View Activities</button>
+          ${!isGuest?`<button onclick="openModal(null,null,'${p}')" style="background:none;border:1px solid ${col};color:${col};padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif">+ Assign</button>`:""}
+        </div>
+      </div>
+      ${stackedBar(stacks.map(x=>({s:x.s,v:{Done:done,"In Progress":prog,Planned:plan,"On Hold":hold,Cancelled:canc}[x.s],c:x.c})),total)}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+        ${stacks.map(x=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:${x.c}"></div><span style="font-size:11px;color:#9A7A50">${x.s}: <b style="color:${x.c}">${{Done:done,"In Progress":prog,Planned:plan,"On Hold":hold,Cancelled:canc}[x.s]}</b></span></div>`).join("")}
+      </div>
+    </div>`).join("")}
+  </div>`;
+}
 
-  await set(newRef,{
-    name,
-    hours,
-    engineer,
-    day,
-    created: Date.now()
-  });
+// ── Dashboard: Workload ───────────────────────────────────────────────────────
+function renderDbWorkload(engLoad,least,maxH,stacks){
+  return`
+  <div class="card" style="margin-bottom:14px;background:#FDF3E7;border:1px solid #E8C090">
+    <div style="font-size:12px;color:#C67C2E;font-weight:700;letter-spacing:1px;margin-bottom:12px">💡 RECOMMENDED — LEAST LOADED ENGINEERS</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      ${least.map(({e,h,cnt},i)=>{const ec=(EC[e]||EC.KTM);return`<div style="background:${ec.bg};border:1px solid ${ec.c}40;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px">${["🥇","🥈","🥉"][i]}</span>${avatar(e,36)}
+        <div style="flex:1"><div style="font-size:15px;font-weight:800;color:${ec.c}">${e}</div><div style="font-size:11px;color:#9A7A50">${h}h assigned · ${cnt} tasks</div><div style="font-size:11px;color:#1E7A44;font-weight:600;margin-top:2px">✓ Available</div></div>
+        ${!isGuest?`<button onclick="openModal(null,'${e}',null)" class="assign-btn">Assign</button>`:""}
+      </div>`;}).join("")}
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:12px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:16px">ENGINEER WORKLOAD — ALL ENGINEERS</div>
+    ${engLoad.map(({e,h,cnt,done,prog,plan,hold})=>{
+      const ec=(EC[e]||EC.KTM);const label=h>=8?"🔴 Heavy":h>=5?"🟡 Medium":"🟢 Light";
+      const tot=done+prog+plan+hold;
+      return`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #F2EDE4">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px">${avatar(e,36)}
+            <div><div style="font-size:15px;font-weight:800;color:${ec.c}">${e}</div><div style="font-size:11px;color:#9A7A50">${cnt} tasks · ${label}</div></div>
+          </div>
+          <div style="text-align:right"><div style="font-size:22px;font-weight:800;color:${h>=8?"#C0392B":h>=5?"#B89420":ec.c}">${h}h</div><div style="font-size:10px;color:#B89A70">total hours</div></div>
+        </div>
+        ${stackedBar([{s:"Done",v:done,c:"#1E7A44"},{s:"In Progress",v:prog,c:"#E8870A"},{s:"Planned",v:plan,c:"#4A90D9"},{s:"On Hold",v:hold,c:"#C8A020"}],tot,32)}
+        <div class="prog-bar" style="margin-top:8px;height:8px"><div class="prog-fill" style="background:${h>=8?"#C0392B":h>=5?"#B89420":ec.c};width:${Math.round((h/maxH)*100)}%"></div></div>
+        <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;align-items:center">
+          ${[{s:"Done",v:done,c:"#1E7A44"},{s:"In Progress",v:prog,c:"#E8870A"},{s:"Planned",v:plan,c:"#4A90D9"},{s:"On Hold",v:hold,c:"#C8A020"}].map(x=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:${x.c}"></div><span style="font-size:10px;color:#9A7A50">${x.s}: <b style="color:${x.c}">${x.v}</b></span></div>`).join("")}
+          ${!isGuest?`<button onclick="openModal(null,'${e}',null)" class="assign-btn" style="margin-left:auto;font-size:10px;padding:4px 12px">+ Assign to ${e}</button>`:""}
+        </div>
+      </div>`;}).join("")}
+  </div>`;
+}
 
-  closeModal();
-};
+// ── Dashboard: Activities ─────────────────────────────────────────────────────
+function renderDbActivities(topActs,maxA,ft){
+  return`<div class="card">
+    <div style="font-size:12px;color:#9A7A50;font-weight:700;letter-spacing:1px;margin-bottom:16px">ACTIVITY BREAKDOWN — TASK COUNT PER ACTIVITY</div>
+    ${topActs.length===0?`<div style="text-align:center;color:#C8B090;padding:40px;font-style:italic">No tasks yet.</div>`:""}
+    ${topActs.map(([name,cnt],i)=>{
+      const a=AM[name];const w=Math.round((cnt/maxA)*100);
+      const actTasks=ft.filter(t=>t.act===name);
+      const engsForAct=[...new Set(actTasks.map(t=>t.eng))];
+      return`<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:${i<topActs.length-1?"1px solid #F2EDE4":"none"}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+            ${a?`<span style="background:#F2EDE4;border-radius:5px;padding:3px 8px;color:#C67C2E;font-size:11px;font-weight:700;flex-shrink:0">#${a.id}</span>`:""}
+            <span style="font-size:13px;font-weight:700;color:#1A1208;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:10px">
+            <div style="display:flex;gap:3px">${engsForAct.map(e=>avatar(e,20)).join("")}</div>
+            <span style="font-size:16px;font-weight:800;color:#C67C2E">${cnt}</span>
+            <span style="font-size:11px;color:#B89A70">task${cnt!==1?"s":""}</span>
+            ${a?.h?`<span style="font-size:10px;color:#B89420;background:#FBF6E0;border:1px solid #DDD090;border-radius:5px;padding:2px 7px;font-weight:600">Std ${a.h}h</span>`:""}
+          </div>
+        </div>
+        <div style="background:#F2EDE4;border-radius:6px;height:14px;overflow:hidden">
+          <div style="background:linear-gradient(90deg,#C67C2E,#B89420);height:100%;border-radius:6px;width:${w}%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
+            ${w>=15?`<span style="font-size:10px;color:#fff;font-weight:700">${w}%</span>`:""}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          ${STATUSES.map(s=>{const sv=actTasks.filter(t=>t.stat===s).length;if(!sv)return"";const st=SS[s]||SS["Planned"];return`<span style="background:${st.bg};color:${st.tx};border:1px solid ${st.bd};border-radius:12px;padding:1px 7px;font-size:9px;font-weight:700">${s}: ${sv}</span>`;}).join("")}
+        </div>
+      </div>`;}).join("")}
+  </div>`;
+}
 
-// ===== REALTIME SYNC =====
-onValue(ref(db,"tasks"), snap=>{
-  const data = snap.val();
-  tasks = data ? Object.values(data) : [];
-  renderTasks();
-});
+// ── Global actions ─────────────────────────────────────────────────────────────
+window.switchMain=t=>{mainTab=t;renderPage();};
+window.prevWeek=()=>{const d=new Date(currentMonday);d.setDate(d.getDate()-7);currentMonday=d;renderPlanner();};
+window.nextWeek=()=>{const d=new Date(currentMonday);d.setDate(d.getDate()+7);currentMonday=d;renderPlanner();};
+window.goToday=()=>{currentMonday=getMonday(new Date());renderPlanner();};
+window.toggleView=()=>{viewMode=viewMode==="grid"?"list":"grid";renderPlanner();};
+window.setEngTab=t=>{activeEngTab=t;renderPlanner();};
+window.logout=()=>{currentUser=null;isGuest=false;renderLogin();};
+window.clearFilters=()=>{fEng="All";fProj="All";fAct="All";fStat="All";fPri="All";fSearch="";renderPlanner();};
+window.openModal=openModal;window.closeModal=closeModal;window.deleteTaskFb=deleteTaskFb;
+window.fEng="All";window.fProj="All";window.fAct="All";window.fStat="All";window.fPri="All";
+window.addProj=async()=>{const v=document.getElementById("newProjInp")?.value?.trim();if(!v)return;projects=[...projects,v];await saveProjects();renderPlanner();toast("✓ Project added");};
+window.removeProj=async i=>{projects=projects.filter((_,j)=>j!==i);await saveProjects();renderPlanner();toast("✓ Removed");};
+function toast(msg){const el=document.getElementById("toast");if(!el)return;el.textContent=msg;el.style.opacity="1";el.style.transform="translateY(0)";setTimeout(()=>{el.style.opacity="0";el.style.transform="translateY(20px)";},3000);}
+function showBanner(msg,bg,col){const b=document.getElementById("banner");if(!b)return;b.innerHTML=msg;b.style.display="block";b.style.background=bg;b.style.color=col;}
 
-// ===== MODAL =====
-window.openModal = ()=> document.getElementById("modal").style.display="flex";
-window.closeModal = ()=> document.getElementById("modal").style.display="none";
-
-// ===== FILTER =====
-filterSelect.onchange = renderTasks;
-
-// ===== INIT =====
-renderGrid();
-
+// ── Boot ──────────────────────────────────────────────────────────────────────
+renderLogin();
+initFirebase();
 </script>
-
-</body>
+</head>
+<body></body>
 </html>
